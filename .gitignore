@@ -3,3 +3,13 @@
 ################################################################################
 
 /.vs
+/packages/Microsoft.DXSDK.D3DX.9.29.952.8
+/Sample/x64
+/SlideShow/x64
+/x64/Debug/D3DCompiler_43.dll
+/x64/Debug/d3dx10d_43.dll
+/x64/Debug/d3dx11d_43.dll
+/x64/Debug/d3dx9d_43.dll
+/x64/Debug/Sample.exe
+/x64/Debug/Sample.pdb
+/x64/Debug/simple.cso
