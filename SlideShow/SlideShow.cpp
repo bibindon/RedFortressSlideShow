@@ -5,7 +5,7 @@
 
 using namespace NSStoryTelling;
 
-bool StoryTelling::m_fastMode = false;
+bool SlideShow::m_fastMode = false;
 
 static std::vector<std::wstring> split(const std::wstring& s, wchar_t delim)
 {
@@ -21,7 +21,7 @@ static std::vector<std::wstring> split(const std::wstring& s, wchar_t delim)
     return result;
 }
 
-void StoryTelling::Init(
+void SlideShow::Init(
     IFont* font,
     ISoundEffect* SE,
     ISprite* sprTextBack,
@@ -42,7 +42,7 @@ void StoryTelling::Init(
     InitConstValue();
 }
 
-void NSStoryTelling::StoryTelling::Init(IFont* font,
+void NSStoryTelling::SlideShow::Init(IFont* font,
                                         ISoundEffect* SE,
                                         ISprite* sprTextBack,
                                         ISprite* sprFade,
@@ -136,7 +136,7 @@ void NSStoryTelling::StoryTelling::Init(IFont* font,
     InitConstValue();
 }
 
-void StoryTelling::Next()
+void SlideShow::Next()
 {
     if (m_waitNextCount < WAIT_NEXT_FRAME)
     {
@@ -158,7 +158,7 @@ void StoryTelling::Next()
     m_waitNextCount = 0;
 }
 
-bool StoryTelling::Update()
+bool SlideShow::Update()
 {
     InitConstValue();
 
@@ -205,7 +205,7 @@ bool StoryTelling::Update()
     return isFinish;
 }
 
-void StoryTelling::Render()
+void SlideShow::Render()
 {
     m_pageList.at(m_pageIndex).GetSprite()->DrawImage(0, 0);
     m_sprTextBack->DrawImage(0, 0);
@@ -236,7 +236,7 @@ void StoryTelling::Render()
     }
 }
 
-void StoryTelling::Finalize()
+void SlideShow::Finalize()
 {
     delete m_sprTextBack;
     m_sprTextBack = nullptr;
@@ -255,12 +255,12 @@ void StoryTelling::Finalize()
     m_sprImage = nullptr;
 }
 
-void NSStoryTelling::StoryTelling::SetFastMode(const bool arg)
+void NSStoryTelling::SlideShow::SetFastMode(const bool arg)
 {
     m_fastMode = arg;
 }
 
-void NSStoryTelling::StoryTelling::InitConstValue()
+void NSStoryTelling::SlideShow::InitConstValue()
 {
     int& fade_frame_max = const_cast<int&>(FADE_FRAME_MAX);
     int& wait_next_frame = const_cast<int&>(WAIT_NEXT_FRAME);

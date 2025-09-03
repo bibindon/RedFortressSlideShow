@@ -193,7 +193,7 @@ D3DXMATERIAL* d3dxMaterials = NULL;
 float f = 0.0f;
 bool bFinish = false;
 
-StoryTelling* story = nullptr;
+SlideShow* story = nullptr;
 
 void TextDraw(LPD3DXFONT pFont, wchar_t* text, int X, int Y)
 {
@@ -489,18 +489,18 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 story->Finalize();
                 delete story;
             }
-            story = new StoryTelling();
+            story = new SlideShow();
             InitStory();
             break;
         }
         case 'F':
         {
-            StoryTelling::SetFastMode(true);
+            SlideShow::SetFastMode(true);
             break;
         }
         case 'G':
         {
-            StoryTelling::SetFastMode(false);
+            SlideShow::SetFastMode(false);
             break;
         }
         case VK_RETURN:

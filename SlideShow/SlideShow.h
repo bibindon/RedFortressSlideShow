@@ -49,7 +49,7 @@ private:
     int m_textIndex = 0;
 };
 
-class StoryTelling
+class SlideShow
 {
 public:
 
