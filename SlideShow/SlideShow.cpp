@@ -3,7 +3,7 @@
 #include "HeaderOnlyCsv.hpp"
 #include "CaesarCipher.h"
 
-using namespace NSStoryTelling;
+using namespace NSSlideShow;
 
 bool SlideShow::m_fastMode = false;
 
@@ -42,7 +42,7 @@ void SlideShow::Init(
     InitConstValue();
 }
 
-void NSStoryTelling::SlideShow::Init(IFont* font,
+void NSSlideShow::SlideShow::Init(IFont* font,
                                         ISoundEffect* SE,
                                         ISprite* sprTextBack,
                                         ISprite* sprFade,
@@ -255,12 +255,12 @@ void SlideShow::Finalize()
     m_sprImage = nullptr;
 }
 
-void NSStoryTelling::SlideShow::SetFastMode(const bool arg)
+void NSSlideShow::SlideShow::SetFastMode(const bool arg)
 {
     m_fastMode = arg;
 }
 
-void NSStoryTelling::SlideShow::InitConstValue()
+void NSSlideShow::SlideShow::InitConstValue()
 {
     int& fade_frame_max = const_cast<int&>(FADE_FRAME_MAX);
     int& wait_next_frame = const_cast<int&>(WAIT_NEXT_FRAME);

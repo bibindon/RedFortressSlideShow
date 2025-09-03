@@ -21,7 +21,7 @@
 #include <crtdbg.h>
 #include <tchar.h>
 
-using namespace NSStoryTelling;
+using namespace NSSlideShow;
 
 #define SAFE_RELEASE(p) { if (p) { (p)->Release(); (p) = NULL; } }
 

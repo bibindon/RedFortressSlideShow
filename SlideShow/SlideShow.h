@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace NSStoryTelling
+namespace NSSlideShow
 {
 class ISprite
 {
