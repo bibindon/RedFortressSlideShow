@@ -260,6 +260,32 @@ void NSSlideShow::SlideShow::SetFastMode(const bool arg)
     m_fastMode = arg;
 }
 
+void NSSlideShow::SlideShow::OnDeviceLost()
+{
+    m_sprFade->OnDeviceLost();
+    m_sprImage->OnDeviceLost();
+    m_sprTextBack->OnDeviceLost();
+    m_font->OnDeviceLost();
+
+    for (auto& item : m_pageList)
+    {
+        item.GetSprite()->OnDeviceLost();
+    }
+}
+
+void NSSlideShow::SlideShow::OnDeviceReset()
+{
+    m_sprFade->OnDeviceReset();
+    m_sprImage->OnDeviceReset();
+    m_sprTextBack->OnDeviceReset();
+    m_font->OnDeviceReset();
+
+    for (auto& item : m_pageList)
+    {
+        item.GetSprite()->OnDeviceReset();
+    }
+}
+
 void NSSlideShow::SlideShow::InitConstValue()
 {
     int& fade_frame_max = const_cast<int&>(FADE_FRAME_MAX);
