@@ -367,7 +367,7 @@ void SlideShow::Render()
                                                        layout.flipX,
                                                        layout.scale);
     }
-    m_sprTextBack->DrawImage(0, 0);
+    m_sprTextBack->DrawImageEx(0, 0, 255, false, 1.0f);
     std::vector<std::vector<std::wstring>> vss = currentPage.GetTextList();
     int textIndex = currentPage.GetTextIndex();
     if (vss.at(textIndex).size() >= 1)
