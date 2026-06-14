@@ -62,6 +62,9 @@ public:
     void SetForegroundSprite(ISprite* sprite);
     ForegroundLayout GetForegroundLayout() const;
     void SetForegroundLayout(const ForegroundLayout& layout);
+    void SetBackgroundBaseResolution(int width, int height);
+    int GetBackgroundBaseWidth() const;
+    int GetBackgroundBaseHeight() const;
 
     std::vector<std::vector<std::wstring>> GetTextList() const;
     void SetTextList(const std::vector<std::vector<std::wstring>>& textList);
@@ -74,6 +77,8 @@ private:
     ISprite* m_sprite = nullptr;
     ISprite* m_foregroundSprite = nullptr;
     ForegroundLayout m_foregroundLayout;
+    int m_backgroundBaseWidth = 0;
+    int m_backgroundBaseHeight = 0;
     std::vector<std::vector<std::wstring>> m_textList;
     int m_textIndex = 0;
 };
@@ -104,6 +109,7 @@ public:
 
     void Finalize();
     void Skip();
+    void SetScreenSize(const int width, const int height);
 
     static void SetFastMode(const bool arg);
     
@@ -124,6 +130,8 @@ private:
 
     ISprite* m_sprFade;
     ISprite* m_sprImage;
+    int m_screenWidth = 1600;
+    int m_screenHeight = 900;
     const int FADE_FRAME_MAX = 20;
     bool m_isFadeIn = false;
     int m_FadeInCount = 0;

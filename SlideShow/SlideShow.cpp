@@ -134,6 +134,13 @@ void NSSlideShow::SlideShow::Init(IFont* font,
     }
 
     std::vector<Page> pageList;
+    const bool hasResolutionColumn = (!vvs.empty() && vvs[0].size() >= 8);
+    const int textCol = hasResolutionColumn ? 3 : 2;
+    const int charCol = hasResolutionColumn ? 4 : 3;
+    const int posCol = hasResolutionColumn ? 5 : 4;
+    const int flipCol = hasResolutionColumn ? 6 : 5;
+    const int scaleCol = hasResolutionColumn ? 7 : 6;
+
     Page page;
     int pageNum = 0;
     std::vector<std::vector<std::wstring>> textList;
@@ -159,6 +166,7 @@ void NSSlideShow::SlideShow::Init(IFont* font,
 
                     page.SetSprite(nullptr);
                     page.SetForegroundSprite(nullptr);
+                    page.SetBackgroundBaseResolution(0, 0);
                     textList.clear();
                 }
             }
@@ -169,26 +177,44 @@ void NSSlideShow::SlideShow::Init(IFont* font,
             sprite->Load(imagePath);
             page.SetSprite(sprite);
 
-            if (line.size() >= 4 && !line.at(3).empty())
+            if (hasResolutionColumn && line.size() > 2)
+            {
+                const std::wstring resStr = line.at(2);
+                const size_t xPos = resStr.find(L'x');
+                if (xPos != std::wstring::npos && xPos > 0 && xPos + 1 < resStr.size())
+                {
+                    try
+                    {
+                        const int w = std::stoi(resStr.substr(0, xPos));
+                        const int h = std::stoi(resStr.substr(xPos + 1));
+                        page.SetBackgroundBaseResolution(w, h);
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            }
+
+            if (line.size() > charCol && !line.at(charCol).empty())
             {
                 ISprite* foregroundSprite = sprImage->Create();
-                foregroundSprite->Load(line.at(3));
+                foregroundSprite->Load(line.at(charCol));
                 page.SetForegroundSprite(foregroundSprite);
 
                 Page::ForegroundLayout layout;
-                if (line.size() >= 5)
+                if (line.size() > posCol)
                 {
-                    layout.position = ParseCharacterPosition(line.at(4));
+                    layout.position = ParseCharacterPosition(line.at(posCol));
                 }
 
-                if (line.size() >= 6)
+                if (line.size() > flipCol)
                 {
-                    layout.flipX = ParseBoolValue(line.at(5));
+                    layout.flipX = ParseBoolValue(line.at(flipCol));
                 }
 
-                if (line.size() >= 7)
+                if (line.size() > scaleCol)
                 {
-                    layout.scale = ParseScaleValue(line.at(6));
+                    layout.scale = ParseScaleValue(line.at(scaleCol));
                 }
 
                 page.SetForegroundLayout(layout);
@@ -199,7 +225,7 @@ void NSSlideShow::SlideShow::Init(IFont* font,
                 page.SetForegroundLayout(Page::ForegroundLayout());
             }
 
-            std::vector<std::wstring> texts = split(line.at(2), L'\n');
+            std::vector<std::wstring> texts = split(line.at(textCol), L'\n');
 
             for (size_t j = 0; j < texts.size(); ++j)
             {
@@ -210,7 +236,7 @@ void NSSlideShow::SlideShow::Init(IFont* font,
         }
         else
         {
-            std::vector<std::wstring> texts = split(line.at(2), L'\n');
+            std::vector<std::wstring> texts = split(line.at(textCol), L'\n');
             for (size_t j = 0; j < texts.size(); ++j)
             {
                 texts.at(j).erase(std::remove(texts.at(j).begin(), texts.at(j).end(), L'"'),
@@ -308,10 +334,25 @@ void SlideShow::Render()
     const int characterCenterY = 432;
     int characterCenterX = 1248;
 
-    m_pageList.at(m_pageIndex).GetSprite()->DrawImage(0, 0);
-    if (m_pageList.at(m_pageIndex).GetForegroundSprite() != nullptr)
+    const Page& currentPage = m_pageList.at(m_pageIndex);
+    const int bgBaseW = currentPage.GetBackgroundBaseWidth();
+    const int bgBaseH = currentPage.GetBackgroundBaseHeight();
+    if (bgBaseW > 0 && bgBaseH > 0)
     {
-        const Page::ForegroundLayout layout = m_pageList.at(m_pageIndex).GetForegroundLayout();
+        float bgScale = static_cast<float>(m_screenWidth) / static_cast<float>(bgBaseW);
+        bgScale = std::ceil(bgScale * 1000.0f) / 1000.0f;
+        const int bgCenterX = m_screenWidth / 2;
+        const int bgCenterY = m_screenHeight / 2;
+        currentPage.GetSprite()->DrawImageEx(bgCenterX, bgCenterY, 255, false, bgScale);
+    }
+    else
+    {
+        currentPage.GetSprite()->DrawImage(0, 0);
+    }
+
+    if (currentPage.GetForegroundSprite() != nullptr)
+    {
+        const Page::ForegroundLayout layout = currentPage.GetForegroundLayout();
         if (layout.position == Page::CharacterPosition::Left)
         {
             characterCenterX = 352;
@@ -321,15 +362,15 @@ void SlideShow::Render()
             characterCenterX = 800;
         }
 
-        m_pageList.at(m_pageIndex).GetForegroundSprite()->DrawImageEx(characterCenterX,
-                                                                       characterCenterY,
-                                                                       255,
-                                                                       layout.flipX,
-                                                                       layout.scale);
+        currentPage.GetForegroundSprite()->DrawImageEx(characterCenterX,
+                                                       characterCenterY,
+                                                       255,
+                                                       layout.flipX,
+                                                       layout.scale);
     }
     m_sprTextBack->DrawImage(0, 0);
-    std::vector<std::vector<std::wstring>> vss = m_pageList.at(m_pageIndex).GetTextList();
-    int textIndex = m_pageList.at(m_pageIndex).GetTextIndex();
+    std::vector<std::vector<std::wstring>> vss = currentPage.GetTextList();
+    int textIndex = currentPage.GetTextIndex();
     if (vss.at(textIndex).size() >= 1)
     {
         m_font->DrawText_(vss.at(textIndex).at(0), 100, 730);
@@ -383,6 +424,12 @@ void NSSlideShow::SlideShow::Skip()
     m_FadeInCount = 0;
     m_isFadeOut = true;
     m_FadeOutCount = 0;
+}
+
+void NSSlideShow::SlideShow::SetScreenSize(const int width, const int height)
+{
+    m_screenWidth = width;
+    m_screenHeight = height;
 }
 
 void NSSlideShow::SlideShow::SetFastMode(const bool arg)
@@ -489,5 +536,21 @@ int Page::GetTextIndex() const
 void Page::SetTextIndex(const int index)
 {
     m_textIndex = index;
+}
+
+void Page::SetBackgroundBaseResolution(const int width, const int height)
+{
+    m_backgroundBaseWidth = width;
+    m_backgroundBaseHeight = height;
+}
+
+int Page::GetBackgroundBaseWidth() const
+{
+    return m_backgroundBaseWidth;
+}
+
+int Page::GetBackgroundBaseHeight() const
+{
+    return m_backgroundBaseHeight;
 }
 
