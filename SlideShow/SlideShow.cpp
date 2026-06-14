@@ -135,11 +135,13 @@ void NSSlideShow::SlideShow::Init(IFont* font,
 
     std::vector<Page> pageList;
     const bool hasResolutionColumn = (!vvs.empty() && vvs[0].size() >= 8);
+    const bool hasCharacterResolutionColumn = (!vvs.empty() && vvs[0].size() >= 9);
     const int textCol = hasResolutionColumn ? 3 : 2;
     const int charCol = hasResolutionColumn ? 4 : 3;
-    const int posCol = hasResolutionColumn ? 5 : 4;
-    const int flipCol = hasResolutionColumn ? 6 : 5;
-    const int scaleCol = hasResolutionColumn ? 7 : 6;
+    const int charResCol = hasCharacterResolutionColumn ? 5 : -1;
+    const int posCol = hasCharacterResolutionColumn ? 6 : (hasResolutionColumn ? 5 : 4);
+    const int flipCol = hasCharacterResolutionColumn ? 7 : (hasResolutionColumn ? 6 : 5);
+    const int scaleCol = hasCharacterResolutionColumn ? 8 : (hasResolutionColumn ? 7 : 6);
 
     Page page;
     int pageNum = 0;
@@ -215,6 +217,23 @@ void NSSlideShow::SlideShow::Init(IFont* font,
                 if (line.size() > scaleCol)
                 {
                     layout.scale = ParseScaleValue(line.at(scaleCol));
+                }
+
+                if (charResCol >= 0 && line.size() > charResCol)
+                {
+                    const std::wstring charResStr = line.at(charResCol);
+                    const size_t xPos = charResStr.find(L'x');
+                    if (xPos != std::wstring::npos && xPos > 0 && xPos + 1 < charResStr.size())
+                    {
+                        try
+                        {
+                            layout.characterBaseWidth = std::stoi(charResStr.substr(0, xPos));
+                            layout.characterBaseHeight = std::stoi(charResStr.substr(xPos + 1));
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
                 }
 
                 page.SetForegroundLayout(layout);
@@ -361,11 +380,20 @@ void SlideShow::Render()
             characterCenterX = 800;
         }
 
+        float effectiveScale = layout.scale;
+        if (layout.characterBaseWidth > 0)
+        {
+            const float kBaseWidth = 1600.0f;
+            float charScale = kBaseWidth / static_cast<float>(layout.characterBaseWidth);
+            charScale = std::ceil(charScale * 1000.0f) / 1000.0f;
+            effectiveScale = layout.scale * charScale;
+        }
+
         currentPage.GetForegroundSprite()->DrawImageEx(characterCenterX,
                                                        characterCenterY,
                                                        255,
                                                        layout.flipX,
-                                                       layout.scale);
+                                                       effectiveScale);
     }
     m_sprTextBack->DrawImageEx(0, 0, 255, false, 1.0f);
     std::vector<std::vector<std::wstring>> vss = currentPage.GetTextList();

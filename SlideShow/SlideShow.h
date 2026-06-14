@@ -54,6 +54,8 @@ public:
         CharacterPosition position = CharacterPosition::Right;
         bool flipX = false;
         float scale = 1.0f;
+        int characterBaseWidth = 0;
+        int characterBaseHeight = 0;
     };
 
     ISprite* GetSprite() const;
