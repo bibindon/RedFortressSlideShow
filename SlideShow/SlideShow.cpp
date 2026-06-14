@@ -371,15 +371,6 @@ void SlideShow::Render()
     if (currentPage.GetForegroundSprite() != nullptr)
     {
         const Page::ForegroundLayout layout = currentPage.GetForegroundLayout();
-        if (layout.position == Page::CharacterPosition::Left)
-        {
-            characterCenterX = 352;
-        }
-        else if (layout.position == Page::CharacterPosition::Center)
-        {
-            characterCenterX = 800;
-        }
-
         float effectiveScale = layout.scale;
         if (layout.characterBaseWidth > 0)
         {
@@ -387,6 +378,24 @@ void SlideShow::Render()
             float charScale = kBaseWidth / static_cast<float>(layout.characterBaseWidth);
             charScale = std::ceil(charScale * 1000.0f) / 1000.0f;
             effectiveScale = layout.scale * charScale;
+        }
+
+        int charWidth = 0;
+        int charHeight = 0;
+        currentPage.GetForegroundSprite()->GetImageSize(charWidth, charHeight);
+        const int renderedWidth = static_cast<int>(static_cast<float>(charWidth) * effectiveScale);
+
+        if (layout.position == Page::CharacterPosition::Left)
+        {
+            characterCenterX = renderedWidth / 2;
+        }
+        else if (layout.position == Page::CharacterPosition::Center)
+        {
+            characterCenterX = m_screenWidth / 2;
+        }
+        else
+        {
+            characterCenterX = m_screenWidth - renderedWidth / 2;
         }
 
         currentPage.GetForegroundSprite()->DrawImageEx(characterCenterX,

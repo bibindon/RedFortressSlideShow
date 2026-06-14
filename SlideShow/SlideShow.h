@@ -16,6 +16,7 @@ public:
                              const float scale) = 0;
     virtual void Load(const std::wstring& filepath) = 0;
     virtual ISprite* Create() = 0;
+    virtual void GetImageSize(int& width, int& height) const { width = 0; height = 0; }
     virtual ~ISprite() {};
     virtual void OnDeviceLost() = 0;
     virtual void OnDeviceReset() = 0;
