@@ -339,11 +339,10 @@ void SlideShow::Render()
     const int bgBaseH = currentPage.GetBackgroundBaseHeight();
     if (bgBaseW > 0 && bgBaseH > 0)
     {
-        float bgScale = static_cast<float>(m_screenWidth) / static_cast<float>(bgBaseW);
+        const float kBaseWidth = 1600.0f;
+        float bgScale = kBaseWidth / static_cast<float>(bgBaseW);
         bgScale = std::ceil(bgScale * 1000.0f) / 1000.0f;
-        const int bgCenterX = m_screenWidth / 2;
-        const int bgCenterY = m_screenHeight / 2;
-        currentPage.GetSprite()->DrawImageEx(bgCenterX, bgCenterY, 255, false, bgScale);
+        currentPage.GetSprite()->DrawImageEx(0, 0, 255, false, bgScale);
     }
     else
     {
