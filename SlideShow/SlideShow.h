@@ -9,6 +9,11 @@ class ISprite
 {
 public:
     virtual void DrawImage(const int x, const int y, const int transparency = 255) = 0;
+    virtual void DrawImageEx(const int x,
+                             const int y,
+                             const int transparency,
+                             const bool flipX,
+                             const float scale) = 0;
     virtual void Load(const std::wstring& filepath) = 0;
     virtual ISprite* Create() = 0;
     virtual ~ISprite() {};
@@ -37,10 +42,26 @@ public:
 class Page
 {
 public:
+    enum class CharacterPosition
+    {
+        Left,
+        Center,
+        Right
+    };
+
+    struct ForegroundLayout
+    {
+        CharacterPosition position = CharacterPosition::Right;
+        bool flipX = false;
+        float scale = 1.0f;
+    };
+
     ISprite* GetSprite() const;
     void SetSprite(ISprite* sprite);
     ISprite* GetForegroundSprite() const;
     void SetForegroundSprite(ISprite* sprite);
+    ForegroundLayout GetForegroundLayout() const;
+    void SetForegroundLayout(const ForegroundLayout& layout);
 
     std::vector<std::vector<std::wstring>> GetTextList() const;
     void SetTextList(const std::vector<std::vector<std::wstring>>& textList);
@@ -52,6 +73,7 @@ private:
 
     ISprite* m_sprite = nullptr;
     ISprite* m_foregroundSprite = nullptr;
+    ForegroundLayout m_foregroundLayout;
     std::vector<std::vector<std::wstring>> m_textList;
     int m_textIndex = 0;
 };

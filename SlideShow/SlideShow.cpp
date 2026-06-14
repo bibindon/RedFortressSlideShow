@@ -1,4 +1,5 @@
 ﻿#include "SlideShow.h"
+#include <algorithm>
 #include <sstream>
 #include "HeaderOnlyCsv.hpp"
 #include "CaesarCipher.h"
@@ -6,6 +7,62 @@
 using namespace NSSlideShow;
 
 bool SlideShow::m_fastMode = false;
+
+namespace
+{
+Page::CharacterPosition ParseCharacterPosition(const std::wstring& rawValue)
+{
+    std::wstring value = rawValue;
+    std::transform(value.begin(), value.end(), value.begin(), towlower);
+
+    if (value == L"left")
+    {
+        return Page::CharacterPosition::Left;
+    }
+
+    if (value == L"center")
+    {
+        return Page::CharacterPosition::Center;
+    }
+
+    return Page::CharacterPosition::Right;
+}
+
+bool ParseBoolValue(const std::wstring& rawValue)
+{
+    std::wstring value = rawValue;
+    std::transform(value.begin(), value.end(), value.begin(), towlower);
+
+    if (value == L"1" || value == L"true" || value == L"yes" || value == L"y" || value == L"on")
+    {
+        return true;
+    }
+
+    return false;
+}
+
+float ParseScaleValue(const std::wstring& rawValue)
+{
+    if (rawValue.empty())
+    {
+        return 1.0f;
+    }
+
+    try
+    {
+        const float value = std::stof(rawValue);
+        if (value > 0.0f)
+        {
+            return value;
+        }
+    }
+    catch (...)
+    {
+    }
+
+    return 1.0f;
+}
+}
 
 static std::vector<std::wstring> split(const std::wstring& s, wchar_t delim)
 {
@@ -117,10 +174,29 @@ void NSSlideShow::SlideShow::Init(IFont* font,
                 ISprite* foregroundSprite = sprImage->Create();
                 foregroundSprite->Load(line.at(3));
                 page.SetForegroundSprite(foregroundSprite);
+
+                Page::ForegroundLayout layout;
+                if (line.size() >= 5)
+                {
+                    layout.position = ParseCharacterPosition(line.at(4));
+                }
+
+                if (line.size() >= 6)
+                {
+                    layout.flipX = ParseBoolValue(line.at(5));
+                }
+
+                if (line.size() >= 7)
+                {
+                    layout.scale = ParseScaleValue(line.at(6));
+                }
+
+                page.SetForegroundLayout(layout);
             }
             else
             {
                 page.SetForegroundSprite(nullptr);
+                page.SetForegroundLayout(Page::ForegroundLayout());
             }
 
             std::vector<std::wstring> texts = split(line.at(2), L'\n');
@@ -229,10 +305,27 @@ bool SlideShow::Update()
 
 void SlideShow::Render()
 {
+    const int characterCenterY = 432;
+    int characterCenterX = 1248;
+
     m_pageList.at(m_pageIndex).GetSprite()->DrawImage(0, 0);
     if (m_pageList.at(m_pageIndex).GetForegroundSprite() != nullptr)
     {
-        m_pageList.at(m_pageIndex).GetForegroundSprite()->DrawImage(0, 0);
+        const Page::ForegroundLayout layout = m_pageList.at(m_pageIndex).GetForegroundLayout();
+        if (layout.position == Page::CharacterPosition::Left)
+        {
+            characterCenterX = 352;
+        }
+        else if (layout.position == Page::CharacterPosition::Center)
+        {
+            characterCenterX = 800;
+        }
+
+        m_pageList.at(m_pageIndex).GetForegroundSprite()->DrawImageEx(characterCenterX,
+                                                                       characterCenterY,
+                                                                       255,
+                                                                       layout.flipX,
+                                                                       layout.scale);
     }
     m_sprTextBack->DrawImage(0, 0);
     std::vector<std::vector<std::wstring>> vss = m_pageList.at(m_pageIndex).GetTextList();
@@ -366,6 +459,16 @@ ISprite* Page::GetForegroundSprite() const
 void Page::SetForegroundSprite(ISprite* sprite)
 {
     m_foregroundSprite = sprite;
+}
+
+Page::ForegroundLayout Page::GetForegroundLayout() const
+{
+    return m_foregroundLayout;
+}
+
+void Page::SetForegroundLayout(const ForegroundLayout& layout)
+{
+    m_foregroundLayout = layout;
 }
 
 std::vector<std::vector<std::wstring>> Page::GetTextList() const
