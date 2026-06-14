@@ -39,6 +39,8 @@ class Page
 public:
     ISprite* GetSprite() const;
     void SetSprite(ISprite* sprite);
+    ISprite* GetForegroundSprite() const;
+    void SetForegroundSprite(ISprite* sprite);
 
     std::vector<std::vector<std::wstring>> GetTextList() const;
     void SetTextList(const std::vector<std::vector<std::wstring>>& textList);
@@ -49,6 +51,7 @@ public:
 private:
 
     ISprite* m_sprite = nullptr;
+    ISprite* m_foregroundSprite = nullptr;
     std::vector<std::vector<std::wstring>> m_textList;
     int m_textIndex = 0;
 };

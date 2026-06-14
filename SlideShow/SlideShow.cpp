@@ -101,6 +101,7 @@ void NSSlideShow::SlideShow::Init(IFont* font,
                     pageList.push_back(page);
 
                     page.SetSprite(nullptr);
+                    page.SetForegroundSprite(nullptr);
                     textList.clear();
                 }
             }
@@ -110,6 +111,17 @@ void NSSlideShow::SlideShow::Init(IFont* font,
             ISprite* sprite = sprImage->Create();
             sprite->Load(imagePath);
             page.SetSprite(sprite);
+
+            if (line.size() >= 4 && !line.at(3).empty())
+            {
+                ISprite* foregroundSprite = sprImage->Create();
+                foregroundSprite->Load(line.at(3));
+                page.SetForegroundSprite(foregroundSprite);
+            }
+            else
+            {
+                page.SetForegroundSprite(nullptr);
+            }
 
             std::vector<std::wstring> texts = split(line.at(2), L'\n');
 
@@ -218,6 +230,10 @@ bool SlideShow::Update()
 void SlideShow::Render()
 {
     m_pageList.at(m_pageIndex).GetSprite()->DrawImage(0, 0);
+    if (m_pageList.at(m_pageIndex).GetForegroundSprite() != nullptr)
+    {
+        m_pageList.at(m_pageIndex).GetForegroundSprite()->DrawImage(0, 0);
+    }
     m_sprTextBack->DrawImage(0, 0);
     std::vector<std::vector<std::wstring>> vss = m_pageList.at(m_pageIndex).GetTextList();
     int textIndex = m_pageList.at(m_pageIndex).GetTextIndex();
@@ -260,6 +276,8 @@ void SlideShow::Finalize()
     {
         delete m_pageList.at(i).GetSprite();
         m_pageList.at(i).SetSprite(nullptr);
+        delete m_pageList.at(i).GetForegroundSprite();
+        m_pageList.at(i).SetForegroundSprite(nullptr);
     }
     delete m_sprImage;
     m_sprImage = nullptr;
@@ -289,6 +307,10 @@ void NSSlideShow::SlideShow::OnDeviceLost()
     for (auto& item : m_pageList)
     {
         item.GetSprite()->OnDeviceLost();
+        if (item.GetForegroundSprite() != nullptr)
+        {
+            item.GetForegroundSprite()->OnDeviceLost();
+        }
     }
 }
 
@@ -302,6 +324,10 @@ void NSSlideShow::SlideShow::OnDeviceReset()
     for (auto& item : m_pageList)
     {
         item.GetSprite()->OnDeviceReset();
+        if (item.GetForegroundSprite() != nullptr)
+        {
+            item.GetForegroundSprite()->OnDeviceReset();
+        }
     }
 }
 
@@ -330,6 +356,16 @@ ISprite* Page::GetSprite() const
 void Page::SetSprite(ISprite* sprite)
 {
     m_sprite = sprite;
+}
+
+ISprite* Page::GetForegroundSprite() const
+{
+    return m_foregroundSprite;
+}
+
+void Page::SetForegroundSprite(ISprite* sprite)
+{
+    m_foregroundSprite = sprite;
 }
 
 std::vector<std::vector<std::wstring>> Page::GetTextList() const
