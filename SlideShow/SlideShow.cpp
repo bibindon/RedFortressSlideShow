@@ -15,6 +15,11 @@ static std::vector<std::wstring> split(const std::wstring& s, wchar_t delim)
 
     while (getline(ss, item, delim))
     {
+        if (!item.empty() && item.back() == L'\r')
+        {
+            item.pop_back();
+        }
+
         result.push_back(item);
     }
 
