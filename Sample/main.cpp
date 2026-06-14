@@ -531,6 +531,16 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         }
+        case VK_F1:
+        {
+            if (story != nullptr)
+            {
+                story->Finalize();
+                delete story;
+                story = nullptr;
+            }
+            break;
+        }
         case VK_ESCAPE:
             PostQuitMessage(0);
             break;
