@@ -535,9 +535,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
             if (story != nullptr)
             {
-                story->Finalize();
-                delete story;
-                story = nullptr;
+                story->Skip();
             }
             break;
         }

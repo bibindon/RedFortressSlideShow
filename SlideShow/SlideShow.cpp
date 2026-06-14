@@ -187,7 +187,12 @@ bool SlideShow::Update()
             m_FadeOutCount = 0;
             m_isFadeIn = true;
             m_FadeInCount = 0;
-            if (m_pageIndex <= (int)m_pageList.size() - 2)
+            if (m_isSkip)
+            {
+                m_isSkip = false;
+                isFinish = true;
+            }
+            else if (m_pageIndex <= (int)m_pageList.size() - 2)
             {
                 m_pageIndex++;
                 m_pageList.at(m_pageIndex).SetTextIndex(0);
@@ -253,6 +258,15 @@ void SlideShow::Finalize()
     }
     delete m_sprImage;
     m_sprImage = nullptr;
+}
+
+void NSSlideShow::SlideShow::Skip()
+{
+    m_isSkip = true;
+    m_isFadeIn = false;
+    m_FadeInCount = 0;
+    m_isFadeOut = true;
+    m_FadeOutCount = 0;
 }
 
 void NSSlideShow::SlideShow::SetFastMode(const bool arg)

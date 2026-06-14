@@ -78,6 +78,7 @@ public:
     void Render();
 
     void Finalize();
+    void Skip();
 
     static void SetFastMode(const bool arg);
     
@@ -106,6 +107,8 @@ private:
 
     const int WAIT_NEXT_FRAME = 10;
     int m_waitNextCount = 0;
+
+    bool m_isSkip = false;
 };
 }
 
