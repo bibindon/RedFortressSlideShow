@@ -43,16 +43,8 @@ public:
 class Page
 {
 public:
-    enum class CharacterPosition
-    {
-        Left,
-        Center,
-        Right
-    };
-
     struct ForegroundLayout
     {
-        CharacterPosition position = CharacterPosition::Right;
         bool flipX = false;
         float scale = 1.0f;
         int characterBaseWidth = 0;
@@ -61,10 +53,16 @@ public:
 
     ISprite* GetSprite() const;
     void SetSprite(ISprite* sprite);
-    ISprite* GetForegroundSprite() const;
-    void SetForegroundSprite(ISprite* sprite);
-    ForegroundLayout GetForegroundLayout() const;
-    void SetForegroundLayout(const ForegroundLayout& layout);
+    ISprite* GetForegroundLeft() const;
+    void SetForegroundLeft(ISprite* sprite, const ForegroundLayout& layout);
+    ISprite* GetForegroundCenter() const;
+    void SetForegroundCenter(ISprite* sprite, const ForegroundLayout& layout);
+    ISprite* GetForegroundRight() const;
+    void SetForegroundRight(ISprite* sprite, const ForegroundLayout& layout);
+    ForegroundLayout GetForegroundLayoutLeft() const;
+    ForegroundLayout GetForegroundLayoutCenter() const;
+    ForegroundLayout GetForegroundLayoutRight() const;
+    void ClearForeground();
     void SetBackgroundBaseResolution(int width, int height);
     int GetBackgroundBaseWidth() const;
     int GetBackgroundBaseHeight() const;
@@ -78,8 +76,14 @@ public:
 private:
 
     ISprite* m_sprite = nullptr;
-    ISprite* m_foregroundSprite = nullptr;
-    ForegroundLayout m_foregroundLayout;
+
+    ISprite* m_foregroundLeft = nullptr;
+    ForegroundLayout m_layoutLeft;
+    ISprite* m_foregroundCenter = nullptr;
+    ForegroundLayout m_layoutCenter;
+    ISprite* m_foregroundRight = nullptr;
+    ForegroundLayout m_layoutRight;
+
     int m_backgroundBaseWidth = 0;
     int m_backgroundBaseHeight = 0;
     std::vector<std::vector<std::wstring>> m_textList;

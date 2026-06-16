@@ -10,24 +10,6 @@ bool SlideShow::m_fastMode = false;
 
 namespace
 {
-Page::CharacterPosition ParseCharacterPosition(const std::wstring& rawValue)
-{
-    std::wstring value = rawValue;
-    std::transform(value.begin(), value.end(), value.begin(), towlower);
-
-    if (value == L"left")
-    {
-        return Page::CharacterPosition::Left;
-    }
-
-    if (value == L"center")
-    {
-        return Page::CharacterPosition::Center;
-    }
-
-    return Page::CharacterPosition::Right;
-}
-
 bool ParseBoolValue(const std::wstring& rawValue)
 {
     std::wstring value = rawValue;
@@ -61,6 +43,51 @@ float ParseScaleValue(const std::wstring& rawValue)
     }
 
     return 1.0f;
+}
+
+void ParseResolutionValue(const std::wstring& resStr, int& outW, int& outH)
+{
+    outW = 0;
+    outH = 0;
+    if (resStr.empty())
+    {
+        return;
+    }
+
+    const size_t xPos = resStr.find(L'x');
+    if (xPos == std::wstring::npos || xPos == 0 || xPos + 1 >= resStr.size())
+    {
+        return;
+    }
+
+    try
+    {
+        outW = std::stoi(resStr.substr(0, xPos));
+        outH = std::stoi(resStr.substr(xPos + 1));
+    }
+    catch (...)
+    {
+    }
+}
+
+void ParseForegroundLayoutMulti(const std::vector<std::wstring>& line, const int baseCol, Page::ForegroundLayout& layout)
+{
+    const int resCol = baseCol;
+    const int flipCol = baseCol + 1;
+    const int scaleCol = baseCol + 2;
+
+    if (line.size() > resCol)
+    {
+        ParseResolutionValue(line.at(resCol), layout.characterBaseWidth, layout.characterBaseHeight);
+    }
+    if (line.size() > flipCol)
+    {
+        layout.flipX = ParseBoolValue(line.at(flipCol));
+    }
+    if (line.size() > scaleCol)
+    {
+        layout.scale = ParseScaleValue(line.at(scaleCol));
+    }
 }
 }
 
@@ -136,12 +163,8 @@ void NSSlideShow::SlideShow::Init(IFont* font,
     std::vector<Page> pageList;
     const bool hasResolutionColumn = (!vvs.empty() && vvs[0].size() >= 8);
     const bool hasCharacterResolutionColumn = (!vvs.empty() && vvs[0].size() >= 9);
+    const bool isMultiSlotFormat = (!vvs.empty() && vvs[0].size() >= 16);
     const int textCol = hasResolutionColumn ? 3 : 2;
-    const int charCol = hasResolutionColumn ? 4 : 3;
-    const int charResCol = hasCharacterResolutionColumn ? 5 : -1;
-    const int posCol = hasCharacterResolutionColumn ? 6 : (hasResolutionColumn ? 5 : 4);
-    const int flipCol = hasCharacterResolutionColumn ? 7 : (hasResolutionColumn ? 6 : 5);
-    const int scaleCol = hasCharacterResolutionColumn ? 8 : (hasResolutionColumn ? 7 : 6);
 
     Page page;
     int pageNum = 0;
@@ -151,26 +174,16 @@ void NSSlideShow::SlideShow::Init(IFont* font,
         std::vector<std::wstring> line = vvs.at(i);
         int pageNumTemp = std::stoi(line.at(0));
 
-        // 新しいページ
         if (pageNum != pageNumTemp)
         {
-            // 古いページを登録
+            if (page.GetSprite() != nullptr)
             {
-                // １行目だったら古いページはない
-                if (page.GetSprite() == nullptr)
-                {
-                    // Do nothing
-                }
-                else
-                {
-                    page.SetTextList(textList);
-                    pageList.push_back(page);
-
-                    page.SetSprite(nullptr);
-                    page.SetForegroundSprite(nullptr);
-                    page.SetBackgroundBaseResolution(0, 0);
-                    textList.clear();
-                }
+                page.SetTextList(textList);
+                pageList.push_back(page);
+                page.SetSprite(nullptr);
+                page.ClearForeground();
+                page.SetBackgroundBaseResolution(0, 0);
+                textList.clear();
             }
             pageNum = pageNumTemp;
             std::wstring imagePath = line.at(1);
@@ -191,65 +204,92 @@ void NSSlideShow::SlideShow::Init(IFont* font,
                         const int h = std::stoi(resStr.substr(xPos + 1));
                         page.SetBackgroundBaseResolution(w, h);
                     }
-                    catch (...)
-                    {
-                    }
+                    catch (...) {}
                 }
             }
+        }
+
+        if (isMultiSlotFormat)
+        {
+            if (line.size() > 4 && !line.at(4).empty())
+            {
+                ISprite* fgSprite = sprImage->Create();
+                fgSprite->Load(line.at(4));
+                Page::ForegroundLayout layout;
+                ParseForegroundLayoutMulti(line, 5, layout);
+                page.SetForegroundLeft(fgSprite, layout);
+            }
+            if (line.size() > 8 && !line.at(8).empty())
+            {
+                ISprite* fgSprite = sprImage->Create();
+                fgSprite->Load(line.at(8));
+                Page::ForegroundLayout layout;
+                ParseForegroundLayoutMulti(line, 9, layout);
+                page.SetForegroundCenter(fgSprite, layout);
+            }
+            if (line.size() > 12 && !line.at(12).empty())
+            {
+                ISprite* fgSprite = sprImage->Create();
+                fgSprite->Load(line.at(12));
+                Page::ForegroundLayout layout;
+                ParseForegroundLayoutMulti(line, 13, layout);
+                page.SetForegroundRight(fgSprite, layout);
+            }
+        }
+        else
+        {
+            const int charCol = hasResolutionColumn ? 4 : 3;
+            const int charResCol = hasCharacterResolutionColumn ? 5 : -1;
+            const int posCol = hasCharacterResolutionColumn ? 6 : (hasResolutionColumn ? 5 : 4);
+            const int flipCol = hasCharacterResolutionColumn ? 7 : (hasResolutionColumn ? 6 : 5);
+            const int scaleCol = hasCharacterResolutionColumn ? 8 : (hasResolutionColumn ? 7 : 6);
 
             if (line.size() > charCol && !line.at(charCol).empty())
             {
                 ISprite* foregroundSprite = sprImage->Create();
                 foregroundSprite->Load(line.at(charCol));
-                page.SetForegroundSprite(foregroundSprite);
 
                 Page::ForegroundLayout layout;
-                if (line.size() > posCol)
-                {
-                    layout.position = ParseCharacterPosition(line.at(posCol));
-                }
-
                 if (line.size() > flipCol)
                 {
                     layout.flipX = ParseBoolValue(line.at(flipCol));
                 }
-
                 if (line.size() > scaleCol)
                 {
                     layout.scale = ParseScaleValue(line.at(scaleCol));
                 }
-
                 if (charResCol >= 0 && line.size() > charResCol)
                 {
-                    const std::wstring charResStr = line.at(charResCol);
-                    const size_t xPos = charResStr.find(L'x');
-                    if (xPos != std::wstring::npos && xPos > 0 && xPos + 1 < charResStr.size())
-                    {
-                        try
-                        {
-                            layout.characterBaseWidth = std::stoi(charResStr.substr(0, xPos));
-                            layout.characterBaseHeight = std::stoi(charResStr.substr(xPos + 1));
-                        }
-                        catch (...)
-                        {
-                        }
-                    }
+                    ParseResolutionValue(line.at(charResCol), layout.characterBaseWidth, layout.characterBaseHeight);
                 }
 
-                page.SetForegroundLayout(layout);
+                std::wstring posValue = L"right";
+                if (line.size() > posCol)
+                {
+                    posValue = line.at(posCol);
+                }
+                std::transform(posValue.begin(), posValue.end(), posValue.begin(), towlower);
+                if (posValue == L"left")
+                {
+                    page.SetForegroundLeft(foregroundSprite, layout);
+                }
+                else if (posValue == L"center")
+                {
+                    page.SetForegroundCenter(foregroundSprite, layout);
+                }
+                else
+                {
+                    page.SetForegroundRight(foregroundSprite, layout);
+                }
             }
-            else
-            {
-                page.SetForegroundSprite(nullptr);
-                page.SetForegroundLayout(Page::ForegroundLayout());
-            }
+        }
 
+        if (pageNum != pageNumTemp || page.GetTextList().empty())
+        {
             std::vector<std::wstring> texts = split(line.at(textCol), L'\n');
-
             for (size_t j = 0; j < texts.size(); ++j)
             {
-                texts.at(j).erase(std::remove(texts.at(j).begin(), texts.at(j).end(), L'"'),
-                                  texts.at(j).end());
+                texts.at(j).erase(std::remove(texts.at(j).begin(), texts.at(j).end(), L'"'), texts.at(j).end());
             }
             textList.push_back(texts);
         }
@@ -258,8 +298,7 @@ void NSSlideShow::SlideShow::Init(IFont* font,
             std::vector<std::wstring> texts = split(line.at(textCol), L'\n');
             for (size_t j = 0; j < texts.size(); ++j)
             {
-                texts.at(j).erase(std::remove(texts.at(j).begin(), texts.at(j).end(), L'"'),
-                                  texts.at(j).end());
+                texts.at(j).erase(std::remove(texts.at(j).begin(), texts.at(j).end(), L'"'), texts.at(j).end());
             }
             textList.push_back(texts);
         }
@@ -348,10 +387,45 @@ bool SlideShow::Update()
     return isFinish;
 }
 
+static void DrawForegroundSprite(ISprite& sprite,
+                                  const Page::ForegroundLayout& layout,
+                                  const int characterCenterY,
+                                  const int slot)
+{
+    float effectiveScale = layout.scale;
+    if (layout.characterBaseWidth > 0)
+    {
+        const float kBaseWidth = 1600.0f;
+        float charScale = kBaseWidth / static_cast<float>(layout.characterBaseWidth);
+        charScale = std::ceil(charScale * 1000.0f) / 1000.0f;
+        effectiveScale = layout.scale * charScale;
+    }
+
+    int charWidth = 0;
+    int charHeight = 0;
+    sprite.GetImageSize(charWidth, charHeight);
+    const int renderedWidth = static_cast<int>(static_cast<float>(charWidth) * effectiveScale);
+
+    int characterCenterX = 0;
+    if (slot == 0)
+    {
+        characterCenterX = renderedWidth / 2;
+    }
+    else if (slot == 1)
+    {
+        characterCenterX = 800;
+    }
+    else
+    {
+        characterCenterX = 1600 - renderedWidth / 2;
+    }
+
+    sprite.DrawImageEx(characterCenterX, characterCenterY, 255, layout.flipX, effectiveScale);
+}
+
 void SlideShow::Render()
 {
     const int characterCenterY = 432;
-    int characterCenterX = 1248;
 
     const Page& currentPage = m_pageList.at(m_pageIndex);
     const int bgBaseW = currentPage.GetBackgroundBaseWidth();
@@ -368,41 +442,26 @@ void SlideShow::Render()
         currentPage.GetSprite()->DrawImage(0, 0);
     }
 
-    if (currentPage.GetForegroundSprite() != nullptr)
     {
-        const Page::ForegroundLayout layout = currentPage.GetForegroundLayout();
-        float effectiveScale = layout.scale;
-        if (layout.characterBaseWidth > 0)
+        ISprite* sprite = currentPage.GetForegroundLeft();
+        if (sprite != nullptr)
         {
-            const float kBaseWidth = 1600.0f;
-            float charScale = kBaseWidth / static_cast<float>(layout.characterBaseWidth);
-            charScale = std::ceil(charScale * 1000.0f) / 1000.0f;
-            effectiveScale = layout.scale * charScale;
+            DrawForegroundSprite(*sprite, currentPage.GetForegroundLayoutLeft(), characterCenterY, 0);
         }
-
-        int charWidth = 0;
-        int charHeight = 0;
-        currentPage.GetForegroundSprite()->GetImageSize(charWidth, charHeight);
-        const int renderedWidth = static_cast<int>(static_cast<float>(charWidth) * effectiveScale);
-
-        if (layout.position == Page::CharacterPosition::Left)
+    }
+    {
+        ISprite* sprite = currentPage.GetForegroundCenter();
+        if (sprite != nullptr)
         {
-            characterCenterX = renderedWidth / 2;
+            DrawForegroundSprite(*sprite, currentPage.GetForegroundLayoutCenter(), characterCenterY, 1);
         }
-        else if (layout.position == Page::CharacterPosition::Center)
+    }
+    {
+        ISprite* sprite = currentPage.GetForegroundRight();
+        if (sprite != nullptr)
         {
-            characterCenterX = m_screenWidth / 2;
+            DrawForegroundSprite(*sprite, currentPage.GetForegroundLayoutRight(), characterCenterY, 2);
         }
-        else
-        {
-            characterCenterX = m_screenWidth - renderedWidth / 2;
-        }
-
-        currentPage.GetForegroundSprite()->DrawImageEx(characterCenterX,
-                                                       characterCenterY,
-                                                       255,
-                                                       layout.flipX,
-                                                       effectiveScale);
     }
     m_sprTextBack->DrawImageEx(0, 0, 255, false, 1.0f);
     std::vector<std::vector<std::wstring>> vss = currentPage.GetTextList();
@@ -446,8 +505,10 @@ void SlideShow::Finalize()
     {
         delete m_pageList.at(i).GetSprite();
         m_pageList.at(i).SetSprite(nullptr);
-        delete m_pageList.at(i).GetForegroundSprite();
-        m_pageList.at(i).SetForegroundSprite(nullptr);
+        delete m_pageList.at(i).GetForegroundLeft();
+        delete m_pageList.at(i).GetForegroundCenter();
+        delete m_pageList.at(i).GetForegroundRight();
+        m_pageList.at(i).ClearForeground();
     }
     delete m_sprImage;
     m_sprImage = nullptr;
@@ -483,10 +544,9 @@ void NSSlideShow::SlideShow::OnDeviceLost()
     for (auto& item : m_pageList)
     {
         item.GetSprite()->OnDeviceLost();
-        if (item.GetForegroundSprite() != nullptr)
-        {
-            item.GetForegroundSprite()->OnDeviceLost();
-        }
+        if (item.GetForegroundLeft() != nullptr) item.GetForegroundLeft()->OnDeviceLost();
+        if (item.GetForegroundCenter() != nullptr) item.GetForegroundCenter()->OnDeviceLost();
+        if (item.GetForegroundRight() != nullptr) item.GetForegroundRight()->OnDeviceLost();
     }
 }
 
@@ -500,10 +560,9 @@ void NSSlideShow::SlideShow::OnDeviceReset()
     for (auto& item : m_pageList)
     {
         item.GetSprite()->OnDeviceReset();
-        if (item.GetForegroundSprite() != nullptr)
-        {
-            item.GetForegroundSprite()->OnDeviceReset();
-        }
+        if (item.GetForegroundLeft() != nullptr) item.GetForegroundLeft()->OnDeviceReset();
+        if (item.GetForegroundCenter() != nullptr) item.GetForegroundCenter()->OnDeviceReset();
+        if (item.GetForegroundRight() != nullptr) item.GetForegroundRight()->OnDeviceReset();
     }
 }
 
@@ -534,25 +593,16 @@ void Page::SetSprite(ISprite* sprite)
     m_sprite = sprite;
 }
 
-ISprite* Page::GetForegroundSprite() const
-{
-    return m_foregroundSprite;
-}
-
-void Page::SetForegroundSprite(ISprite* sprite)
-{
-    m_foregroundSprite = sprite;
-}
-
-Page::ForegroundLayout Page::GetForegroundLayout() const
-{
-    return m_foregroundLayout;
-}
-
-void Page::SetForegroundLayout(const ForegroundLayout& layout)
-{
-    m_foregroundLayout = layout;
-}
+ISprite* Page::GetForegroundLeft() const { return m_foregroundLeft; }
+void Page::SetForegroundLeft(ISprite* sprite, const ForegroundLayout& layout) { delete m_foregroundLeft; m_foregroundLeft = sprite; m_layoutLeft = layout; }
+ISprite* Page::GetForegroundCenter() const { return m_foregroundCenter; }
+void Page::SetForegroundCenter(ISprite* sprite, const ForegroundLayout& layout) { delete m_foregroundCenter; m_foregroundCenter = sprite; m_layoutCenter = layout; }
+ISprite* Page::GetForegroundRight() const { return m_foregroundRight; }
+void Page::SetForegroundRight(ISprite* sprite, const ForegroundLayout& layout) { delete m_foregroundRight; m_foregroundRight = sprite; m_layoutRight = layout; }
+Page::ForegroundLayout Page::GetForegroundLayoutLeft() const { return m_layoutLeft; }
+Page::ForegroundLayout Page::GetForegroundLayoutCenter() const { return m_layoutCenter; }
+Page::ForegroundLayout Page::GetForegroundLayoutRight() const { return m_layoutRight; }
+void Page::ClearForeground() { m_foregroundLeft = nullptr; m_foregroundCenter = nullptr; m_foregroundRight = nullptr; }
 
 std::vector<std::vector<std::wstring>> Page::GetTextList() const
 {
