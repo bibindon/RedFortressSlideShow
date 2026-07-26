@@ -390,21 +390,37 @@ bool SlideShow::Update()
 static void DrawForegroundSprite(ISprite& sprite,
                                   const Page::ForegroundLayout& layout,
                                   const int characterCenterY,
+                                  const int screenWidth,
+                                  const int screenHeight,
                                   const int slot)
 {
     float effectiveScale = layout.scale;
-    if (layout.characterBaseWidth > 0)
-    {
-        const float kBaseWidth = 1600.0f;
-        float charScale = kBaseWidth / static_cast<float>(layout.characterBaseWidth);
-        charScale = std::ceil(charScale * 1000.0f) / 1000.0f;
-        effectiveScale = layout.scale * charScale;
-    }
 
     int charWidth = 0;
     int charHeight = 0;
     sprite.GetImageSize(charWidth, charHeight);
+    if (charWidth <= 0 || charHeight <= 0)
+    {
+        return;
+    }
+
+    float fitScale = effectiveScale;
+    if (layout.characterBaseWidth > 0)
+    {
+        fitScale = (std::min)(fitScale,
+                              static_cast<float>(layout.characterBaseWidth) /
+                              static_cast<float>(charWidth));
+    }
+    if (layout.characterBaseHeight > 0)
+    {
+        fitScale = (std::min)(fitScale,
+                              static_cast<float>(layout.characterBaseHeight) /
+                              static_cast<float>(charHeight));
+    }
+    effectiveScale = fitScale;
+
     const int renderedWidth = static_cast<int>(static_cast<float>(charWidth) * effectiveScale);
+    const int renderedHeight = static_cast<int>(static_cast<float>(charHeight) * effectiveScale);
 
     int characterCenterX = 0;
     if (slot == 0)
@@ -413,14 +429,31 @@ static void DrawForegroundSprite(ISprite& sprite,
     }
     else if (slot == 1)
     {
-        characterCenterX = 800;
+        characterCenterX = screenWidth / 2;
     }
     else
     {
-        characterCenterX = 1600 - renderedWidth / 2;
+        characterCenterX = screenWidth - renderedWidth / 2;
     }
 
-    sprite.DrawImageEx(characterCenterX, characterCenterY, 255, layout.flipX, effectiveScale);
+    int fittedCharacterCenterY = characterCenterY;
+    if (renderedHeight <= screenHeight)
+    {
+        if (fittedCharacterCenterY - renderedHeight / 2 < 0)
+        {
+            fittedCharacterCenterY = renderedHeight / 2;
+        }
+        if (fittedCharacterCenterY + renderedHeight / 2 > screenHeight)
+        {
+            fittedCharacterCenterY = screenHeight - renderedHeight / 2;
+        }
+    }
+
+    sprite.DrawImageEx(characterCenterX,
+                       fittedCharacterCenterY,
+                       255,
+                       layout.flipX,
+                       effectiveScale);
 }
 
 void SlideShow::Render()
@@ -446,21 +479,36 @@ void SlideShow::Render()
         ISprite* sprite = currentPage.GetForegroundLeft();
         if (sprite != nullptr)
         {
-            DrawForegroundSprite(*sprite, currentPage.GetForegroundLayoutLeft(), characterCenterY, 0);
+            DrawForegroundSprite(*sprite,
+                                 currentPage.GetForegroundLayoutLeft(),
+                                 characterCenterY,
+                                 m_screenWidth,
+                                 m_screenHeight,
+                                 0);
         }
     }
     {
         ISprite* sprite = currentPage.GetForegroundCenter();
         if (sprite != nullptr)
         {
-            DrawForegroundSprite(*sprite, currentPage.GetForegroundLayoutCenter(), characterCenterY, 1);
+            DrawForegroundSprite(*sprite,
+                                 currentPage.GetForegroundLayoutCenter(),
+                                 characterCenterY,
+                                 m_screenWidth,
+                                 m_screenHeight,
+                                 1);
         }
     }
     {
         ISprite* sprite = currentPage.GetForegroundRight();
         if (sprite != nullptr)
         {
-            DrawForegroundSprite(*sprite, currentPage.GetForegroundLayoutRight(), characterCenterY, 2);
+            DrawForegroundSprite(*sprite,
+                                 currentPage.GetForegroundLayoutRight(),
+                                 characterCenterY,
+                                 m_screenWidth,
+                                 m_screenHeight,
+                                 2);
         }
     }
     m_sprTextBack->DrawImageEx(0, 0, 255, false, 1.0f);
