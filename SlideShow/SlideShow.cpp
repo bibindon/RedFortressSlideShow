@@ -458,8 +458,8 @@ static void DrawForegroundSprite(ISprite& sprite,
 
 void SlideShow::Render()
 {
-    // 1024pxの立ち絵を画面上端で切らず、頭上に少し余白を確保する。
-    const int characterCenterY = 462;
+    // 立ち絵を従来位置から70px下げ、頭部と台詞欄の間の構図を整える。
+    const int characterCenterY = 532;
 
     const Page& currentPage = m_pageList.at(m_pageIndex);
     const int bgBaseW = currentPage.GetBackgroundBaseWidth();
