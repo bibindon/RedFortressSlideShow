@@ -458,7 +458,8 @@ static void DrawForegroundSprite(ISprite& sprite,
 
 void SlideShow::Render()
 {
-    const int characterCenterY = 432;
+    // 1024pxの立ち絵を画面上端で切らず、頭上に少し余白を確保する。
+    const int characterCenterY = 462;
 
     const Page& currentPage = m_pageList.at(m_pageIndex);
     const int bgBaseW = currentPage.GetBackgroundBaseWidth();
