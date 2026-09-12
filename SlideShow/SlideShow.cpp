@@ -169,6 +169,8 @@ void NSSlideShow::SlideShow::Init(IFont* font,
     Page page;
     int pageNum = 0;
     std::vector<std::vector<std::wstring>> textList;
+    std::vector<ForegroundState> foregroundStates;
+    ForegroundState foregroundState;
     for (size_t i = 1; i < vvs.size(); ++i)
     {
         std::vector<std::wstring> line = vvs.at(i);
@@ -180,6 +182,9 @@ void NSSlideShow::SlideShow::Init(IFont* font,
             {
                 page.SetTextList(textList);
                 pageList.push_back(page);
+                m_foregroundStates.push_back(foregroundStates);
+                foregroundStates.clear();
+                foregroundState = ForegroundState();
                 page.SetSprite(nullptr);
                 page.ClearForeground();
                 page.SetBackgroundBaseResolution(0, 0);
@@ -211,29 +216,16 @@ void NSSlideShow::SlideShow::Init(IFont* font,
 
         if (isMultiSlotFormat)
         {
-            if (line.size() > 4 && !line.at(4).empty())
+            // 3スロット形式は各行が完全な指定。空欄のキャラクターは表示しない。
+            foregroundState = ForegroundState();
+            for (int slot = 0; slot < 3; ++slot)
             {
-                ISprite* fgSprite = sprImage->Create();
-                fgSprite->Load(line.at(4));
-                Page::ForegroundLayout layout;
-                ParseForegroundLayoutMulti(line, 5, layout);
-                page.SetForegroundLeft(fgSprite, layout);
-            }
-            if (line.size() > 8 && !line.at(8).empty())
-            {
-                ISprite* fgSprite = sprImage->Create();
-                fgSprite->Load(line.at(8));
-                Page::ForegroundLayout layout;
-                ParseForegroundLayoutMulti(line, 9, layout);
-                page.SetForegroundCenter(fgSprite, layout);
-            }
-            if (line.size() > 12 && !line.at(12).empty())
-            {
-                ISprite* fgSprite = sprImage->Create();
-                fgSprite->Load(line.at(12));
-                Page::ForegroundLayout layout;
-                ParseForegroundLayoutMulti(line, 13, layout);
-                page.SetForegroundRight(fgSprite, layout);
+                const int column = 4 + slot * 4;
+                if (line.size() > column && !line.at(column).empty())
+                {
+                    foregroundState.sprites.at(slot) = LoadForegroundSprite(line.at(column));
+                    ParseForegroundLayoutMulti(line, column + 1, foregroundState.layouts.at(slot));
+                }
             }
         }
         else
@@ -246,8 +238,7 @@ void NSSlideShow::SlideShow::Init(IFont* font,
 
             if (line.size() > charCol && !line.at(charCol).empty())
             {
-                ISprite* foregroundSprite = sprImage->Create();
-                foregroundSprite->Load(line.at(charCol));
+                ISprite* foregroundSprite = LoadForegroundSprite(line.at(charCol));
 
                 Page::ForegroundLayout layout;
                 if (line.size() > flipCol)
@@ -271,46 +262,53 @@ void NSSlideShow::SlideShow::Init(IFont* font,
                 std::transform(posValue.begin(), posValue.end(), posValue.begin(), towlower);
                 if (posValue == L"left")
                 {
-                    page.SetForegroundLeft(foregroundSprite, layout);
+                    foregroundState.sprites.at(0) = foregroundSprite;
+                    foregroundState.layouts.at(0) = layout;
                 }
                 else if (posValue == L"center")
                 {
-                    page.SetForegroundCenter(foregroundSprite, layout);
+                    foregroundState.sprites.at(1) = foregroundSprite;
+                    foregroundState.layouts.at(1) = layout;
                 }
                 else
                 {
-                    page.SetForegroundRight(foregroundSprite, layout);
+                    foregroundState.sprites.at(2) = foregroundSprite;
+                    foregroundState.layouts.at(2) = layout;
                 }
             }
         }
 
-        if (pageNum != pageNumTemp || page.GetTextList().empty())
+        std::vector<std::wstring> texts = split(line.at(textCol), L'\n');
+        for (std::wstring& text : texts)
         {
-            std::vector<std::wstring> texts = split(line.at(textCol), L'\n');
-            for (size_t j = 0; j < texts.size(); ++j)
-            {
-                texts.at(j).erase(std::remove(texts.at(j).begin(), texts.at(j).end(), L'"'), texts.at(j).end());
-            }
-            textList.push_back(texts);
+            text.erase(std::remove(text.begin(), text.end(), L'"'), text.end());
         }
-        else
-        {
-            std::vector<std::wstring> texts = split(line.at(textCol), L'\n');
-            for (size_t j = 0; j < texts.size(); ++j)
-            {
-                texts.at(j).erase(std::remove(texts.at(j).begin(), texts.at(j).end(), L'"'), texts.at(j).end());
-            }
-            textList.push_back(texts);
-        }
+        textList.push_back(texts);
+        foregroundStates.push_back(foregroundState);
     }
     page.SetTextList(textList);
     pageList.push_back(page);
+    m_foregroundStates.push_back(foregroundStates);
 
     m_pageList = pageList;
 
     m_isFadeIn = true;
 
     InitConstValue();
+}
+
+ISprite* SlideShow::LoadForegroundSprite(const std::wstring& path)
+{
+    const auto found = m_foregroundSprites.find(path);
+    if (found != m_foregroundSprites.end())
+    {
+        return found->second.get();
+    }
+    std::unique_ptr<ISprite> sprite(m_sprImage->Create());
+    sprite->Load(path);
+    ISprite* result = sprite.get();
+    m_foregroundSprites.emplace(path, std::move(sprite));
+    return result;
 }
 
 void SlideShow::Next()
@@ -476,40 +474,32 @@ void SlideShow::Render()
         currentPage.GetSprite()->DrawImage(0, 0);
     }
 
+    ForegroundState foreground;
+    if (!m_foregroundStates.empty())
     {
-        ISprite* sprite = currentPage.GetForegroundLeft();
-        if (sprite != nullptr)
-        {
-            DrawForegroundSprite(*sprite,
-                                 currentPage.GetForegroundLayoutLeft(),
-                                 characterCenterY,
-                                 m_screenWidth,
-                                 m_screenHeight,
-                                 0);
-        }
+        foreground = m_foregroundStates.at(m_pageIndex).at(currentPage.GetTextIndex());
     }
+    else
     {
-        ISprite* sprite = currentPage.GetForegroundCenter();
-        if (sprite != nullptr)
-        {
-            DrawForegroundSprite(*sprite,
-                                 currentPage.GetForegroundLayoutCenter(),
-                                 characterCenterY,
-                                 m_screenWidth,
-                                 m_screenHeight,
-                                 1);
-        }
+        // Pageを直接渡す既存APIも引き続き利用できる。
+        foreground.sprites = { currentPage.GetForegroundLeft(),
+                               currentPage.GetForegroundCenter(),
+                               currentPage.GetForegroundRight() };
+        foreground.layouts = { currentPage.GetForegroundLayoutLeft(),
+                               currentPage.GetForegroundLayoutCenter(),
+                               currentPage.GetForegroundLayoutRight() };
     }
+    for (int slot = 0; slot < 3; ++slot)
     {
-        ISprite* sprite = currentPage.GetForegroundRight();
+        ISprite* sprite = foreground.sprites.at(slot);
         if (sprite != nullptr)
         {
             DrawForegroundSprite(*sprite,
-                                 currentPage.GetForegroundLayoutRight(),
+                                 foreground.layouts.at(slot),
                                  characterCenterY,
                                  m_screenWidth,
                                  m_screenHeight,
-                                 2);
+                                 slot);
         }
     }
     m_sprTextBack->DrawImageEx(0, 0, 255, false, 1.0f);
@@ -559,6 +549,9 @@ void SlideShow::Finalize()
         delete m_pageList.at(i).GetForegroundRight();
         m_pageList.at(i).ClearForeground();
     }
+    m_pageList.clear();
+    m_foregroundStates.clear();
+    m_foregroundSprites.clear();
     delete m_sprImage;
     m_sprImage = nullptr;
 }
@@ -590,6 +583,11 @@ void NSSlideShow::SlideShow::OnDeviceLost()
     m_sprTextBack->OnDeviceLost();
     m_font->OnDeviceLost();
 
+    for (auto& item : m_foregroundSprites)
+    {
+        item.second->OnDeviceLost();
+    }
+
     for (auto& item : m_pageList)
     {
         item.GetSprite()->OnDeviceLost();
@@ -605,6 +603,11 @@ void NSSlideShow::SlideShow::OnDeviceReset()
     m_sprImage->OnDeviceReset();
     m_sprTextBack->OnDeviceReset();
     m_font->OnDeviceReset();
+
+    for (auto& item : m_foregroundSprites)
+    {
+        item.second->OnDeviceReset();
+    }
 
     for (auto& item : m_pageList)
     {

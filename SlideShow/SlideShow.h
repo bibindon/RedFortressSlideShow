@@ -2,6 +2,9 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <array>
+#include <map>
+#include <memory>
 
 namespace NSSlideShow
 {
@@ -133,6 +136,16 @@ private:
     IFont* m_font;
     ISoundEffect* m_SE;
     std::vector<Page> m_pageList;
+
+    // CSVの各メッセージに対応する立ち絵。画像はパスごとに一度だけ読み込む。
+    struct ForegroundState
+    {
+        std::array<ISprite*, 3> sprites = {};
+        std::array<Page::ForegroundLayout, 3> layouts = {};
+    };
+    std::vector<std::vector<ForegroundState>> m_foregroundStates;
+    std::map<std::wstring, std::unique_ptr<ISprite>> m_foregroundSprites;
+    ISprite* LoadForegroundSprite(const std::wstring& path);
     int m_pageIndex = 0;
 
     ISprite* m_sprFade;
